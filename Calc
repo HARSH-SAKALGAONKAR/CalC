@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f1efe8;
+      font-family: system-ui, sans-serif;
+    }
+
+    .calc {
+      background: #ffffff;
+      border: 0.5px solid rgba(0,0,0,0.15);
+      border-radius: 12px;
+      width: 300px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    .display {
+      padding: 1.25rem 1.25rem 0.75rem;
+      text-align: right;
+      border-bottom: 0.5px solid rgba(0,0,0,0.15);
+    }
+
+    .display .expr {
+      font-size: 13px;
+      color: #888780;
+      min-height: 18px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      direction: rtl;
+    }
+
+    .display .val {
+      font-size: 32px;
+      font-weight: 500;
+      color: #1a1a1a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      direction: rtl;
+      line-height: 1.2;
+      margin-top: 4px;
+    }
+
+    .btns {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .btn {
+      border: none;
+      background: transparent;
+      border-top: 0.5px solid rgba(0,0,0,0.15);
+      border-right: 0.5px solid rgba(0,0,0,0.15);
+      padding: 0;
+      height: 64px;
+      font-size: 16px;
+      font-weight: 400;
+      cursor: pointer;
+      color: #1a1a1a;
+      transition: background 0.1s;
+      outline: none;
+    }
+
+    .btn:nth-child(4n) { border-right: none; }
+
+    .btn:hover { background: #f1efe8; }
+    .btn:active { background: #d3d1c7; transform: scale(0.97); }
+
+    .btn.op   { color: #185FA5; font-weight: 500; }
+    .btn.fn   { color: #5f5e5a; font-size: 14px; }
+
+    .btn.eq {
+      background: #185FA5;
+      color: #fff;
+      font-size: 20px;
+      border-right: none;
+    }
+    .btn.eq:hover  { background: #0C447C; }
+    .btn.eq:active { background: #042C53; }
+
+    .btn.zero {
+      grid-column: span 2;
+      border-right: 0.5px solid rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+
+<div class="calc" role="application" aria-label="Calculator">
+  <div class="display">
+    <div class="expr" id="expr"></div>
+    <div class="val"  id="val">0</div>
+  </div>
+  <div class="btns" id="btns">
+    <button class="btn fn" data-action="clear">AC</button>
+    <button class="btn fn" data-action="sign">+/−</button>
+    <button class="btn fn" data-action="percent">%</button>
+    <button class="btn op" data-action="op" data-val="÷">÷</button>
+
+    <button class="btn" data-action="digit" data-val="7">7</button>
+    <button class="btn" data-action="digit" data-val="8">8</button>
+    <button class="btn" data-action="digit" data-val="9">9</button>
+    <button class="btn op" data-action="op" data-val="×">×</button>
+
+    <button class="btn" data-action="digit" data-val="4">4</button>
+    <button class="btn" data-action="digit" data-val="5">5</button>
+    <button class="btn" data-action="digit" data-val="6">6</button>
+    <button class="btn op" data-action="op" data-val="−">−</button>
+
+    <button class="btn" data-action="digit" data-val="1">1</button>
+    <button class="btn" data-action="digit" data-val="2">2</button>
+    <button class="btn" data-action="digit" data-val="3">3</button>
+    <button class="btn op" data-action="op" data-val="+">+</button>
+
+    <button class="btn zero" data-action="digit" data-val="0">0</button>
+    <button class="btn"      data-action="dot">.</button>
+    <button class="btn eq"   data-action="equals">=</button>
+  </div>
+</div>
+
+<script>
+  let cur = '0', prev = '', op = '', freshResult = false;
+
+  const valEl  = document.getElementById('val');
+  const exprEl = document.getElementById('expr');
+
+  function display() {
+    valEl.textContent = cur.length > 10
+      ? parseFloat(cur).toExponential(4)
+      : cur;
+  }
+
+  function applyOp(a, o, b) {
+    const x = parseFloat(a), y = parseFloat(b);
+    if (o === '+') return x + y;
+    if (o === '−') return x - y;
+    if (o === '×') return x * y;
+    if (o === '÷') return y !== 0 ? x / y : 'Error';
+    return y;
+  }
+
+  document.getElementById('btns').addEventListener('click', e => {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+    const { action, val } = btn.dataset;
+
+    if (action === 'digit') {
+      if (cur === '0' || freshResult) { cur = val; freshResult = false; }
+      else if (cur.length < 12) cur += val;
+      display();
+    }
+
+    if (action === 'dot') {
+      if (freshResult) { cur = '0'; freshResult = false; }
+      if (!cur.includes('.')) cur += '.';
+      display();
+    }
+
+    if (action === 'clear') {
+      cur = '0'; prev = ''; op = ''; freshResult = false;
+      exprEl.textContent = '';
+      display();
+    }
+
+    if (action === 'sign') {
+      cur = String(parseFloat(cur) * -1);
+      display();
+    }
+
+    if (action === 'percent') {
+      cur = String(parseFloat(cur) / 100);
+      display();
+    }
+
+    if (action === 'op') {
+      if (op && !freshResult) {
+        const res = applyOp(prev, op, cur);
+        cur = res === 'Error' ? 'Error' : String(+res.toFixed(10));
+        exprEl.textContent = '';
+        display();
+      }
+      prev = cur; op = val; freshResult = true;
+      exprEl.textContent = prev + ' ' + op;
+      document.querySelectorAll('.btn.op').forEach(b =>
+        b.style.fontWeight = b.dataset.val === val ? '700' : '500'
+      );
+    }
+
+    if (action === 'equals') {
+      if (!op) return;
+      const res = applyOp(prev, op, cur);
+      exprEl.textContent = prev + ' ' + op + ' ' + cur + ' =';
+      cur = res === 'Error' ? 'Error' : String(+res.toFixed(10));
+      op = ''; prev = ''; freshResult = true;
+      document.querySelectorAll('.btn.op').forEach(b => b.style.fontWeight = '500');
+      display();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    const map = {
+      '0':'0','1':'1','2':'2','3':'3','4':'4',
+      '5':'5','6':'6','7':'7','8':'8','9':'9',
+      '+':'+', '-':'−', '*':'×', '/':'÷',
+      'Enter':'=', '=':'=', '.':'.', 'Backspace':'back', 'Escape':'clear'
+    };
+    const k = map[e.key];
+    if (!k) return;
+    e.preventDefault();
+
+    if (k === 'back') {
+      cur = cur.length > 1 ? cur.slice(0, -1) : '0';
+      display();
+      return;
+    }
+
+    const sel =
+      k === '='     ? '[data-action="equals"]' :
+      k === 'clear' ? '[data-action="clear"]'  :
+      ['÷','×','−','+'].includes(k) ? `[data-val="${k}"]` :
+      k === '.'     ? '[data-action="dot"]'    :
+                      `[data-action="digit"][data-val="${k}"]`;
+
+    document.querySelector(sel)?.click();
+  });
+</script>
+
+</body>
+</html>
